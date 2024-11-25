@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" 
+  url      = env("DATABASE_URL")
+}
+enum RoleType {
+  ADMIN
+  STUDENT
+  LANDLORD
+  PORTER
+}
+enum ReservationType {
+  OFFCAMPUS
+  ONCAMPUS
+}
+
+model User {
+  id                String    @id @default(uuid())
+  name              String
+  email             String   @unique
+  password          String
+  gender            String
+  mobileNumber      String @unique
+  role              RoleType
+  verified          Boolean @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  student           Student?
+  landlord          Landlord?
+  hostel            Hostel[]
+}
+
+
+
+model Student {
+  id                String    @id @default(uuid())
+  userId            String    @unique
+  level             String
+  department        String
+  reservations      Reservation[]
+  reviews           Review[]
+  user              User      @relation(fields: [userId], references: [id])
+   createdAt          DateTime   @default(now())
+    updatedAt          DateTime   @updatedAt
+}
+
+model Landlord {
+  id                String    @id @default(uuid())
+  userId            String    @unique
+  properties        Property[]
+  user              User      @relation(fields: [userId], references: [id])
+   createdAt          DateTime   @default(now())
+    updatedAt          DateTime   @updatedAt
+}
+
+
+model Property {
+  id                String    @id @default(uuid())
+  landlordId        String
+  title             String
+  description       String
+  price             Float
+  location          String
+  amenities         String[]
+  images            String[]
+  availability      Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  reservations      Reservation[]
+  reviews           Review[]
+  landlord          Landlord  @relation(fields: [landlordId], references: [id])
+  
+}
+
+model Hostel {
+  id                String    @id @default(uuid())
+  userId          String @map("userId")
+  name              String
+  description       String
+  location          String
+  rooms             Room[]
+ user               User      @relation(fields: [userId], references: [id])
+}
+
+model Room {
+  id                String    @id @default(uuid())
+  hostelId          String
+  roomNumber        String
+  capacity          Int @default(4)
+  availability      Boolean  @default(true)
+  reservations      Reservation[]
+  hostel            Hostel    @relation(fields: [hostelId], references: [id])
+}
+
+model Reservation {
+  id                String    @id @default(uuid())
+  studentId         String
+  propertyId        String?
+  roomId            String?
+  checkInDate       DateTime
+  checkOutDate      DateTime
+  status            ReservationStatus @default(PENDING)
+  reservationType   ReservationType
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  student           Student  @relation(fields: [studentId], references: [id])
+  property          Property? @relation(fields: [propertyId], references: [id])
+  room              Room?     @relation(fields: [roomId], references: [id])
+  order             Order?
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model Review {
+  id                String    @id @default(uuid())
+  studentId         String
+  propertyId        String
+  rating            Int
+  comment           String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  student           Student  @relation(fields: [studentId], references: [id])
+  property          Property @relation(fields: [propertyId], references: [id])
+}
+
+model Order {
+  id                String    @id @default(uuid())
+  reservationId     String   @unique
+  totalAmount       Float
+  paymentStatus     PaymentStatus @default(PENDING)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  reservation       Reservation @relation(fields: [reservationId], references: [id])
+  payments          Payment[]
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Payment {
+  id                String    @id @default(uuid())
+  orderId           String
+  amount            Float
+  paymentMethod     PaymentMethod
+  paymentDate       DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  order             Order     @relation(fields: [orderId], references: [id])
+}
+
+enum PaymentMethod {
+  CASH
+  REMITA
+  POS
+  TRANSFER
+}
